@@ -1,12 +1,11 @@
-// Mock the bambooClient first
 const mockGet = jest.fn();
 const mockGetBuffer = jest.fn();
 
-jest.mock('../../bambooClient', () => ({
-  bambooClient: {
+jest.mock('../../requestContext', () => ({
+  getBambooClientForRequest: jest.fn(() => ({
     get: mockGet,
     getBuffer: mockGetBuffer,
-  }
+  })),
 }));
 
 import { listCompanyFiles, getCompanyFile, getMetaFields } from '../../tools/meta';

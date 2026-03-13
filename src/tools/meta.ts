@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { bambooClient } from '../bambooClient.js';
 import type { CompanyFiles, Fields } from '../types.js';
+import { getBambooClientForRequest, type BambooRequestContext } from '../requestContext.js';
 
 /**
  * List Company Files Tool - Browse available company files and categories
@@ -16,8 +16,9 @@ import type { CompanyFiles, Fields } from '../types.js';
  */
 export const listCompanyFilesSchema = z.object({}).describe('List all company files and categories (no parameters required)');
 
-export async function listCompanyFiles() {
+export async function listCompanyFiles(_: Record<string, never> = {}, extra?: BambooRequestContext) {
   try {
+    const bambooClient = getBambooClientForRequest(extra);
     const response = await bambooClient.get<CompanyFiles>('/files/view');
     
     return {
@@ -53,8 +54,9 @@ export const getCompanyFileSchema = z.object({
   fileId: z.string().describe('The ID of the company file to retrieve'),
 });
 
-export async function getCompanyFile(params: z.infer<typeof getCompanyFileSchema>) {
+export async function getCompanyFile(params: z.infer<typeof getCompanyFileSchema>, extra?: BambooRequestContext) {
   try {
+    const bambooClient = getBambooClientForRequest(extra);
     // First try to get the file metadata
     try {
       const fileBuffer = await bambooClient.getBuffer(`/files/${params.fileId}`);
@@ -111,8 +113,9 @@ export async function getCompanyFile(params: z.infer<typeof getCompanyFileSchema
  */
 export const getMetaFieldsSchema = z.object({}).describe('Get a list of all available fields in the account (no parameters required)');
 
-export async function getMetaFields() {
+export async function getMetaFields(_: Record<string, never> = {}, extra?: BambooRequestContext) {
   try {
+    const bambooClient = getBambooClientForRequest(extra);
     const response = await bambooClient.get<Fields>('/meta/fields');
     
     return {
@@ -131,4 +134,3 @@ export async function getMetaFields() {
     };
   }
 }
-

@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { bambooClient } from '../bambooClient.js';
 import type { Employee, EmployeeDirectory, Goals } from '../types.js';
+import { getBambooClientForRequest, type BambooRequestContext } from '../requestContext.js';
 
 /**
  * Get Employee Tool - Retrieves detailed employee information
@@ -19,8 +19,9 @@ export const getEmployeeSchema = z.object({
   onlyCurrent: z.boolean().describe('Set to false to return future dated values from history table fields').default(true).optional(),
 });
 
-export async function getEmployee(params: z.infer<typeof getEmployeeSchema>) {
+export async function getEmployee(params: z.infer<typeof getEmployeeSchema>, extra?: BambooRequestContext) {
   try {
+    const bambooClient = getBambooClientForRequest(extra);
     const queryParams: Record<string, any> = {
       fields: params.fields,
     };
@@ -54,8 +55,9 @@ export const getEmployeePhotoSchema = z.object({
   size: z.enum(['original', 'large', 'medium', 'small', 'xs', 'tiny']).describe('Photo size').default('medium'),
 });
 
-export async function getEmployeePhoto(params: z.infer<typeof getEmployeePhotoSchema>) {
+export async function getEmployeePhoto(params: z.infer<typeof getEmployeePhotoSchema>, extra?: BambooRequestContext) {
   try {
+    const bambooClient = getBambooClientForRequest(extra);
     const photoBuffer = await bambooClient.getBuffer(`/employees/${params.employeeId}/photo/${params.size}`);
     
     // Convert buffer to base64 for returning in MCP response
@@ -97,8 +99,9 @@ export async function getEmployeePhoto(params: z.infer<typeof getEmployeePhotoSc
  */
 export const getEmployeeDirectorySchema = z.object({}).describe('Get the employee directory (no parameters required)');
 
-export async function getEmployeeDirectory() {
+export async function getEmployeeDirectory(_: Record<string, never> = {}, extra?: BambooRequestContext) {
   try {
+    const bambooClient = getBambooClientForRequest(extra);
     const response = await bambooClient.get<EmployeeDirectory>('/employees/directory');
     
     return {
@@ -135,8 +138,9 @@ export const getEmployeeGoalsSchema = z.object({
   filter: z.enum(['open', 'closed', 'all']).describe('Filter goals by status').default('all').optional(),
 });
 
-export async function getEmployeeGoals(params: z.infer<typeof getEmployeeGoalsSchema>) {
+export async function getEmployeeGoals(params: z.infer<typeof getEmployeeGoalsSchema>, extra?: BambooRequestContext) {
   try {
+    const bambooClient = getBambooClientForRequest(extra);
     const queryParams: Record<string, any> = {};
     
     if (params.filter && params.filter !== 'all') {

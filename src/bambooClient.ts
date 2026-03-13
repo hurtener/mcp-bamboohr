@@ -2,21 +2,31 @@ import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 import { bambooConfig } from './config.js';
 import type { BambooErrorResponse } from './types.js';
 
+export interface BambooHRClientOptions {
+  apiToken: string;
+  baseUrl: string;
+  debug?: boolean;
+}
+
 export class BambooHRClient {
   private client: AxiosInstance;
+  private baseUrl: string;
 
-  constructor() {
+  constructor(options?: BambooHRClientOptions) {
+    const config = options ?? this.getDefaultOptions();
+    this.baseUrl = config.baseUrl;
+
     this.client = axios.create({
-      baseURL: bambooConfig.baseUrl,
+      baseURL: config.baseUrl,
       headers: {
         'Accept': 'application/json',
-        'Authorization': this.createAuthHeader(),
+        'Authorization': this.createAuthHeader(config.apiToken),
       },
       timeout: 30000, // 30 second timeout
     });
 
     // Request interceptor for logging
-    if (bambooConfig.debug) {
+    if (config.debug) {
       this.client.interceptors.request.use((config) => {
         console.log(`[BambooHR] ${config.method?.toUpperCase()} ${config.url}`);
         if (config.params) {
@@ -38,9 +48,25 @@ export class BambooHRClient {
     }
   }
 
-  private createAuthHeader(): string {
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
+  private getDefaultOptions(): BambooHRClientOptions {
+    if (!bambooConfig.apiToken || !bambooConfig.baseUrl) {
+      throw new Error('Default BambooHR client credentials are not configured');
+    }
+
+    return {
+      apiToken: bambooConfig.apiToken,
+      baseUrl: bambooConfig.baseUrl,
+      debug: bambooConfig.debug,
+    };
+  }
+
+  private createAuthHeader(apiToken: string): string {
     // BambooHR uses Basic Auth with token as username and "x" as password
-    const credentials = Buffer.from(`${bambooConfig.apiToken}:x`).toString('base64');
+    const credentials = Buffer.from(`${apiToken}:x`).toString('base64');
     return `Basic ${credentials}`;
   }
 
@@ -121,4 +147,6 @@ export class BambooHRClient {
 }
 
 // Export a singleton instance
-export const bambooClient = new BambooHRClient();
+export const bambooClient = bambooConfig.apiToken && bambooConfig.baseUrl
+  ? new BambooHRClient()
+  : undefined;

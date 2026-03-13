@@ -181,6 +181,75 @@ export interface TimeOffBalance {
 /** Time off balance response structure - returns array directly */
 export type TimeOffBalances = TimeOffBalance[];
 
+export interface DatasetDefinition {
+  id?: string;
+  name: string;
+  label?: string;
+  description?: string;
+  [key: string]: any;
+}
+
+export interface DatasetDefinitions {
+  datasets: DatasetDefinition[];
+  [key: string]: any;
+}
+
+export interface DatasetFieldDefinition {
+  id?: string;
+  name: string;
+  label?: string;
+  type?: string;
+  filterable?: boolean;
+  [key: string]: any;
+}
+
+export interface DatasetFieldDefinitions {
+  fields: DatasetFieldDefinition[];
+  [key: string]: any;
+}
+
+export interface DatasetFieldOptionsResponse {
+  [key: string]: any;
+}
+
+export interface DatasetQueryResponse {
+  [key: string]: any;
+}
+
+export interface TabularFieldDefinition {
+  id?: string;
+  tableName?: string;
+  name: string;
+  alias?: string;
+  type?: string;
+  [key: string]: any;
+}
+
+export interface TabularFieldDefinitions {
+  fields: TabularFieldDefinition[];
+  [key: string]: any;
+}
+
+export interface ChangedEmployeeIdsResponse {
+  employees?: Array<string | number>;
+  employeeIds?: Array<string | number>;
+  [key: string]: any;
+}
+
+export interface ChangedTableRowsResponse {
+  employees?: any[];
+  rows?: any[];
+  [key: string]: any;
+}
+
+export interface TimeOffPoliciesResponse {
+  [key: string]: any;
+}
+
+export interface EmployeeTimeOffPoliciesResponse {
+  [key: string]: any;
+}
+
 // Error response type
 export interface BambooErrorResponse {
   errors?: Array<{

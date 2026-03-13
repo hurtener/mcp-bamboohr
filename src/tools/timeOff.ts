@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { bambooClient } from '../bambooClient.js';
 import type { TimeOffBalances, TimeOffRequests, WhosOut } from '../types.js';
+import { getBambooClientForRequest, type BambooRequestContext } from '../requestContext.js';
 
 /**
  * Estimate Future Time Off Balance Tool - Calculate future time off balances
@@ -19,8 +19,9 @@ export const estimateTimeOffBalanceSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe('Future date to estimate balance for (YYYY-MM-DD format)').optional(),
 });
 
-export async function estimateTimeOffBalance(params: z.infer<typeof estimateTimeOffBalanceSchema>) {
+export async function estimateTimeOffBalance(params: z.infer<typeof estimateTimeOffBalanceSchema>, extra?: BambooRequestContext) {
   try {
+    const bambooClient = getBambooClientForRequest(extra);
     const queryParams: Record<string, any> = {};
     
     if (params.date) {
@@ -74,8 +75,9 @@ export const getTimeOffRequestsSchema = z.object({
   type: z.string().describe('Filter by time off type ID').optional(),
 });
 
-export async function getTimeOffRequests(params: z.infer<typeof getTimeOffRequestsSchema>) {
+export async function getTimeOffRequests(params: z.infer<typeof getTimeOffRequestsSchema>, extra?: BambooRequestContext) {
   try {
+    const bambooClient = getBambooClientForRequest(extra);
     const queryParams: Record<string, any> = {};
     
     if (params.id !== undefined) queryParams.id = params.id;
@@ -119,8 +121,9 @@ export const getWhosOutSchema = z.object({
   end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe('End date (YYYY-MM-DD format) - defaults to 14 days from start date').optional(),
 });
 
-export async function getWhosOut(params: z.infer<typeof getWhosOutSchema>) {
+export async function getWhosOut(params: z.infer<typeof getWhosOutSchema>, extra?: BambooRequestContext) {
   try {
+    const bambooClient = getBambooClientForRequest(extra);
     const queryParams: Record<string, any> = {};
     
     if (params.start) queryParams.start = params.start;

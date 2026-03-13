@@ -1,0 +1,66 @@
+name: Publish
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test -- --runInBand
+
+      - name: Build package
+        run: npm run build
+
+      - name: Read package metadata
+        id: package
+        run: |
+          echo "name=$(node -p "require('./package.json').name")" >> "$GITHUB_OUTPUT"
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Check npm for existing version
+        id: publish_check
+        run: |
+          REMOTE_VERSION="$(npm view "${{ steps.package.outputs.name }}" version 2>/dev/null || true)"
+          if [ "$REMOTE_VERSION" = "${{ steps.package.outputs.version }}" ]; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "Version ${{ steps.package.outputs.version }} already exists for ${{ steps.package.outputs.name }} on npm."
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            if [ -n "$REMOTE_VERSION" ]; then
+              echo "Latest npm version is $REMOTE_VERSION. Publishing ${{ steps.package.outputs.version }}."
+            else
+              echo "Package does not exist on npm yet. Publishing initial release ${{ steps.package.outputs.version }}."
+            fi
+          fi
+
+      - name: Publish package
+        if: steps.publish_check.outputs.publish == 'true'
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.npm_token }}

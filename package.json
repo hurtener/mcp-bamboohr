@@ -1,7 +1,7 @@
 {
-  "name": "mcp-bamboohr",
+  "name": "@hurtener/mcp-bamboohr",
   "version": "1.0.2",
-  "description": "Model Context Protocol server for BambooHR API integration",
+  "description": "Model Context Protocol server for BambooHR with stdio and streamable HTTP transport",
   "main": "build/index.js",
   "bin": {
     "mcp-bamboohr": "build/index.js"
@@ -26,8 +26,15 @@
     "ai",
     "assistant"
   ],
-  "author": "Evrim Alacan <evrimalacan@gmail.com>",
+  "author": "hurtener",
+  "contributors": [
+    "Santiago Benvenuto",
+    "OpenAI Codex"
+  ],
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.5",
     "axios": "^1.6.0",
@@ -47,10 +54,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/evrimalacan/mcp-bamboohr.git"
+    "url": "git+https://github.com/hurtener/mcp-bamboohr.git"
   },
-  "bugs": "https://github.com/evrimalacan/mcp-bamboohr/issues",
-  "homepage": "https://github.com/evrimalacan/mcp-bamboohr#readme",
+  "bugs": "https://github.com/hurtener/mcp-bamboohr/issues",
+  "homepage": "https://github.com/hurtener/mcp-bamboohr#readme",
   "jest": {
     "preset": "ts-jest",
     "testEnvironment": "node",

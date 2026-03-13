@@ -1,10 +1,9 @@
-// Mock the bambooClient first
 const mockGet = jest.fn();
 
-jest.mock('../../bambooClient', () => ({
-  bambooClient: {
+jest.mock('../../requestContext', () => ({
+  getBambooClientForRequest: jest.fn(() => ({
     get: mockGet,
-  }
+  })),
 }));
 
 import { estimateTimeOffBalance, getTimeOffRequests, getWhosOut } from '../../tools/timeOff';
