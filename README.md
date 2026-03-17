@@ -103,7 +103,7 @@ In streamable HTTP mode, BambooHR credentials are request-scoped. The server res
 
 ## Tool Reference
 
-The server currently exposes 24 tools.
+The server currently exposes 26 tools.
 
 ### Employee tools
 
@@ -259,6 +259,55 @@ Requirements:
 - `confirm=true`
 
 `action` must be one of `approve`, `deny`, or `cancel`.
+
+#### `add-time-off-history-item`
+Add a BambooHR time-off history item for an employee. This is mutating.
+
+```json
+{
+  "employeeId": "123",
+  "payload": {
+    "date": "2026-04-01",
+    "amount": "8.0",
+    "note": "Manual adjustment"
+  },
+  "confirm": true
+}
+```
+
+Requirements:
+
+- `BAMBOO_ENABLE_MUTATIONS=true`
+- `confirm=true`
+
+Returns the BambooHR response status, `Location` header when present, and response body.
+
+#### `assign-employee-time-off-policies`
+Assign or unassign BambooHR time-off policies for an employee. This is mutating.
+
+```json
+{
+  "employeeId": "123",
+  "assignments": [
+    {
+      "timeOffPolicyId": 9,
+      "accrualStartDate": "2026-01-01"
+    },
+    {
+      "timeOffPolicyId": 12,
+      "accrualStartDate": null
+    }
+  ],
+  "confirm": true
+}
+```
+
+Requirements:
+
+- `BAMBOO_ENABLE_MUTATIONS=true`
+- `confirm=true`
+
+Use `accrualStartDate: null` to unassign a policy.
 
 ### File and metadata tools
 

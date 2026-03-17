@@ -1,4 +1,6 @@
 import {
+  addTimeOffHistoryItemData,
+  assignEmployeeTimeOffPoliciesData,
   changeTimeOffRequestStatusData,
   createTimeOffRequestData,
   getChangedEmployeeIdsData,
@@ -19,6 +21,7 @@ describe('bambooData', () => {
     get: jest.fn(),
     post: jest.fn(),
     put: jest.fn(),
+    putDetailed: jest.fn(),
     getBaseUrl: jest.fn(() => 'https://acme.bamboohr.com/api/v1'),
   } as any;
 
@@ -54,17 +57,21 @@ describe('bambooData', () => {
   });
 
   it('should map mutation endpoints correctly', async () => {
-    client.post.mockResolvedValue({});
     client.put.mockResolvedValue({});
+    client.putDetailed.mockResolvedValue({ data: {}, status: 201, headers: { location: '/employees/123/time_off/history/1' } });
 
     await createTimeOffRequestData(client, '123', { start: '2025-05-01' });
     await changeTimeOffRequestStatusData(client, '99', 'approve', { note: 'approved', status: 'deny' });
+    await addTimeOffHistoryItemData(client, '123', { date: '2025-05-01', amount: '8' });
+    await assignEmployeeTimeOffPoliciesData(client, '123', [{ timeOffPolicyId: 5, accrualStartDate: null }]);
 
     expect(client.put).toHaveBeenCalledWith('/employees/123/time_off/request', { start: '2025-05-01' });
     expect(client.put).toHaveBeenCalledWith('/time_off/requests/99/status', {
       status: 'approve',
       note: 'approved',
     });
+    expect(client.putDetailed).toHaveBeenCalledWith('/employees/123/time_off/history', { date: '2025-05-01', amount: '8' });
+    expect(client.put).toHaveBeenCalledWith('/employees/123/time_off/policies', [{ timeOffPolicyId: 5, accrualStartDate: null }]);
   });
 
   it('should resolve the employee dataset name from discoverable datasets', () => {

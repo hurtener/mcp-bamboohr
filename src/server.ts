@@ -44,6 +44,10 @@ import {
   listCompanyFilesSchema,
 } from './tools/meta.js';
 import {
+  addTimeOffHistoryItem,
+  addTimeOffHistoryItemSchema,
+  assignEmployeeTimeOffPolicies,
+  assignEmployeeTimeOffPoliciesSchema,
   changeTimeOffRequestStatus,
   changeTimeOffRequestStatusSchema,
   createTimeOffRequest,
@@ -59,7 +63,7 @@ import { registerSurfacePrompts, registerSurfaceResources } from './surface.js';
 export function createBambooMcpServer(): McpServer {
   const server = new McpServer({
     name: 'bamboohr',
-    version: '1.0.2',
+    version: '1.1.0',
   });
 
   server.registerTool('get-employee', {
@@ -138,6 +142,20 @@ export function createBambooMcpServer(): McpServer {
     inputSchema: changeTimeOffRequestStatusSchema.shape,
     annotations: { title: 'Change Time Off Request Status', readOnlyHint: false },
   }, changeTimeOffRequestStatus);
+
+  server.registerTool('add-time-off-history-item', {
+    title: 'Add Time Off History Item',
+    description: 'Add a BambooHR time-off history item for an employee. This mutates BambooHR data and requires confirm=true.',
+    inputSchema: addTimeOffHistoryItemSchema.shape,
+    annotations: { title: 'Add Time Off History Item', readOnlyHint: false },
+  }, addTimeOffHistoryItem);
+
+  server.registerTool('assign-employee-time-off-policies', {
+    title: 'Assign Employee Time Off Policies',
+    description: 'Assign or unassign BambooHR time-off policies for an employee. This mutates BambooHR data and requires confirm=true.',
+    inputSchema: assignEmployeeTimeOffPoliciesSchema.shape,
+    annotations: { title: 'Assign Employee Time Off Policies', readOnlyHint: false },
+  }, assignEmployeeTimeOffPolicies);
 
   server.registerTool('list-company-files', {
     title: 'List Company Files',
@@ -218,7 +236,7 @@ export function createBambooMcpServer(): McpServer {
 
   server.registerTool('search-people', {
     title: 'Search People',
-    description: 'Search BambooHR people data and return compact employee cards.',
+    description: 'Search BambooHR people data via the employee directory and return compact employee cards. Falls back to datasets only when directory access is unavailable.',
     inputSchema: searchPeopleSchema.shape,
     annotations: { title: 'Search People', readOnlyHint: true },
   }, searchPeople);

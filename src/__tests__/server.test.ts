@@ -70,6 +70,8 @@ describe('MCP server surface', () => {
 
     expect(tools.tools.some((tool) => tool.name === 'list-datasets')).toBe(true);
     expect(tools.tools.some((tool) => tool.name === 'create-time-off-request')).toBe(true);
+    expect(tools.tools.some((tool) => tool.name === 'add-time-off-history-item')).toBe(true);
+    expect(tools.tools.some((tool) => tool.name === 'assign-employee-time-off-policies')).toBe(true);
     expect(prompts.prompts.some((prompt) => prompt.name === 'bamboohr-surface-orientation')).toBe(true);
     expect(resources.resources.some((resource) => resource.uri === 'bamboohr://surface/catalog')).toBe(true);
     expect(resourceTemplates.resourceTemplates.some((resource) => resource.uriTemplate === 'bamboohr://surface/datasets/{dataset}/fields')).toBe(true);

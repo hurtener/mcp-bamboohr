@@ -36,6 +36,8 @@ export const SURFACE_TOOLS: SurfaceToolEntry[] = [
   { name: 'get-employee-time-off-policies', title: 'Get Employee Time Off Policies', description: 'Fetch policy assignments for a specific employee.', readOnly: true, category: 'Time Off' },
   { name: 'create-time-off-request', title: 'Create Time Off Request', description: 'Create a BambooHR time-off request. Mutating, requires confirm=true.', readOnly: false, category: 'Time Off' },
   { name: 'change-time-off-request-status', title: 'Change Time Off Request Status', description: 'Approve, deny, or cancel a request. Mutating, requires confirm=true.', readOnly: false, category: 'Time Off' },
+  { name: 'add-time-off-history-item', title: 'Add Time Off History Item', description: 'Add a BambooHR time-off history item for an employee. Mutating, requires confirm=true.', readOnly: false, category: 'Time Off' },
+  { name: 'assign-employee-time-off-policies', title: 'Assign Employee Time Off Policies', description: 'Assign or unassign employee time-off policies. Mutating, requires confirm=true.', readOnly: false, category: 'Time Off' },
   { name: 'list-company-files', title: 'List Company Files', description: 'List company file categories and files.', readOnly: true, category: 'Files' },
   { name: 'get-company-file', title: 'Get Company File', description: 'Fetch a company file or its binary content.', readOnly: true, category: 'Files' },
   { name: 'get-meta-fields', title: 'Get Meta Fields', description: 'List BambooHR field definitions.', readOnly: true, category: 'Metadata' },
@@ -47,7 +49,7 @@ export const SURFACE_TOOLS: SurfaceToolEntry[] = [
   { name: 'get-employee-table', title: 'Get Employee Table', description: 'Fetch rows from a BambooHR employee history table.', readOnly: true, category: 'History' },
   { name: 'get-changed-employee-ids', title: 'Get Changed Employee IDs', description: 'List employees changed since a point in time.', readOnly: true, category: 'History' },
   { name: 'get-changed-table-rows', title: 'Get Changed Table Rows', description: 'List changed table rows since a point in time.', readOnly: true, category: 'History' },
-  { name: 'search-people', title: 'Search People', description: 'Curated people search over BambooHR employee data.', readOnly: true, category: 'Workflows' },
+  { name: 'search-people', title: 'Search People', description: 'Curated people search over the BambooHR employee directory, with dataset fallback only when needed.', readOnly: true, category: 'Workflows' },
   { name: 'get-employee-history', title: 'Get Employee History', description: 'Aggregate common employee history tables.', readOnly: true, category: 'Workflows' },
 ];
 
@@ -221,7 +223,7 @@ export function registerSurfacePrompts(server: McpServer): void {
         type: 'text',
         text: [
           `Answer this BambooHR people question: ${question}.`,
-          'Prefer `search-people` for targeted person lookup and `query-dataset` against the account\'s employee dataset for broader analysis.',
+          'Prefer `search-people` for targeted person lookup because it uses the employee directory first, and use `query-dataset` against the account\'s employee dataset for broader analysis.',
           'Use `get-dataset-fields` first if field availability is unclear, and use `get-employee-history` when the question involves historical changes.',
           'Assume BambooHR credentials are request-scoped in HTTP mode.',
         ].join(' '),

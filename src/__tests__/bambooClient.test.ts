@@ -208,6 +208,24 @@ describe('BambooClient', () => {
 
       await expect(client.put('/test-endpoint', {})).rejects.toThrow('Network error: PUT failed');
     });
+
+    it('should return detailed PUT response metadata when requested', async () => {
+      const mockResponse = {
+        data: { created: true },
+        status: 201,
+        headers: { location: '/employees/123/time_off/history/456' },
+      };
+      mockAxiosInstance.put.mockResolvedValue(mockResponse);
+
+      const result = await client.putDetailed('/test-endpoint', { key: 'value' });
+
+      expect(mockAxiosInstance.put).toHaveBeenCalledWith('/test-endpoint', { key: 'value' });
+      expect(result).toEqual({
+        data: { created: true },
+        status: 201,
+        headers: { location: '/employees/123/time_off/history/456' },
+      });
+    });
   });
 
   describe('DELETE method', () => {

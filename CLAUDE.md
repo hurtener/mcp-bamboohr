@@ -102,10 +102,12 @@ Current mutating tools:
 
 - `create-time-off-request`
 - `change-time-off-request-status`
+- `add-time-off-history-item`
+- `assign-employee-time-off-policies`
 
 ## Tool Surface
 
-The server exposes 24 tools.
+The server exposes 26 tools.
 
 ### Employee tools
 
@@ -355,6 +357,70 @@ Notes:
 
 Returns:
 - The BambooHR status-change response payload.
+
+#### `add-time-off-history-item`
+
+Description:
+- Adds a BambooHR time-off history item for one employee.
+- Mutating tool.
+
+Input shape:
+
+```json
+{
+  "employeeId": "123",
+  "payload": {
+    "date": "2026-04-01",
+    "amount": "8.0",
+    "note": "Manual adjustment"
+  },
+  "confirm": true
+}
+```
+
+Notes:
+
+- `payload` is passed through directly to BambooHR.
+- Requires `BAMBOO_ENABLE_MUTATIONS=true`.
+- Requires `confirm=true`.
+
+Returns:
+- An object with BambooHR `status`, optional `location`, and response `data`.
+
+#### `assign-employee-time-off-policies`
+
+Description:
+- Assigns or unassigns BambooHR time-off policies for one employee.
+- Mutating tool.
+
+Input shape:
+
+```json
+{
+  "employeeId": "123",
+  "assignments": [
+    {
+      "timeOffPolicyId": 9,
+      "accrualStartDate": "2026-01-01"
+    },
+    {
+      "timeOffPolicyId": 12,
+      "accrualStartDate": null
+    }
+  ],
+  "confirm": true
+}
+```
+
+Notes:
+
+- `assignments` is sent to BambooHR as-is.
+- Use `accrualStartDate: null` to unassign a policy.
+- Requires `BAMBOO_ENABLE_MUTATIONS=true`.
+- Requires `confirm=true`.
+
+Returns:
+- The BambooHR policy-assignment response payload.
 
 ### File and metadata tools
 

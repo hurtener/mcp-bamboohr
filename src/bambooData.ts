@@ -1,4 +1,4 @@
-import { BambooHRClient } from './bambooClient.js';
+import { BambooHRClient, type BambooHRResponse } from './bambooClient.js';
 import type {
   ChangedEmployeeIdsResponse,
   ChangedTableRowsResponse,
@@ -166,4 +166,20 @@ export async function changeTimeOffRequestStatusData(
     ...(payload ?? {}),
     status: action,
   });
+}
+
+export async function addTimeOffHistoryItemData(
+  client: BambooHRClient,
+  employeeId: string,
+  payload: Record<string, unknown>,
+): Promise<BambooHRResponse<unknown>> {
+  return client.putDetailed(`/employees/${employeeId}/time_off/history`, payload);
+}
+
+export async function assignEmployeeTimeOffPoliciesData(
+  client: BambooHRClient,
+  employeeId: string,
+  assignments: Array<Record<string, unknown>>,
+): Promise<unknown> {
+  return client.put(`/employees/${employeeId}/time_off/policies`, assignments);
 }

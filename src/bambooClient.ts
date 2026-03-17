@@ -8,6 +8,12 @@ export interface BambooHRClientOptions {
   debug?: boolean;
 }
 
+export interface BambooHRResponse<T = any> {
+  data: T;
+  headers: Record<string, string | string[] | undefined>;
+  status: number;
+}
+
 export class BambooHRClient {
   private client: AxiosInstance;
   private baseUrl: string;
@@ -131,6 +137,19 @@ export class BambooHRClient {
     try {
       const response: AxiosResponse<T> = await this.client.put(endpoint, data);
       return response.data;
+    } catch (error) {
+      throw this.handleError(error as AxiosError);
+    }
+  }
+
+  async putDetailed<T = any>(endpoint: string, data?: any): Promise<BambooHRResponse<T>> {
+    try {
+      const response: AxiosResponse<T> = await this.client.put(endpoint, data);
+      return {
+        data: response.data,
+        headers: response.headers as Record<string, string | string[] | undefined>,
+        status: response.status,
+      };
     } catch (error) {
       throw this.handleError(error as AxiosError);
     }

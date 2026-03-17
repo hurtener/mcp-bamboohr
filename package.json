@@ -1,6 +1,6 @@
 {
   "name": "@hurtener/mcp-bamboohr",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Model Context Protocol server for BambooHR with stdio and streamable HTTP transport",
   "main": "build/index.js",
   "bin": {
