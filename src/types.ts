@@ -257,4 +257,7 @@ export interface BambooErrorResponse {
     description?: string;
   }>;
   message?: string;
+  error?: string;
+  description?: string;
+  [key: string]: any;
 }

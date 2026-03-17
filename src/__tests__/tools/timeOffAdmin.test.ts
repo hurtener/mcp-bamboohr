@@ -61,7 +61,7 @@ describe('Time Off Admin Tools', () => {
 
     const createResult = await createTimeOffRequest({
       employeeId: '123',
-      payload: { start: '2025-05-01' },
+      payload: { start: '2025-05-01', end: '2025-05-01', amount: 1 },
       confirm: true,
     });
     const statusResult = await changeTimeOffRequestStatus({
@@ -83,8 +83,13 @@ describe('Time Off Admin Tools', () => {
 
     expect(mockEnsureMutationsEnabled).toHaveBeenCalledTimes(4);
     expect(mockEnsureMutationsEnabled).toHaveBeenCalledWith(true);
-    expect(mockCreateTimeOffRequestData).toHaveBeenCalledWith({}, '123', { start: '2025-05-01' });
-    expect(mockChangeTimeOffRequestStatusData).toHaveBeenCalledWith({}, 'req-1', 'approve', { note: 'ok' });
+    expect(mockCreateTimeOffRequestData).toHaveBeenCalledWith({}, '123', {
+      start: '2025-05-01',
+      end: '2025-05-01',
+      amount: 1,
+      status: 'requested',
+    });
+    expect(mockChangeTimeOffRequestStatusData).toHaveBeenCalledWith({}, 'req-1', 'approved', { note: 'ok' });
     expect(mockAddTimeOffHistoryItemData).toHaveBeenCalledWith({}, '123', { date: '2025-05-01', amount: '8.0' });
     expect(mockAssignEmployeeTimeOffPoliciesData).toHaveBeenCalledWith({}, '123', [{ timeOffPolicyId: 9, accrualStartDate: null }]);
     expect(JSON.parse(createResult.content[0].text)).toEqual({ id: 'req-1' });
@@ -95,6 +100,88 @@ describe('Time Off Admin Tools', () => {
       data: null,
     });
     expect(JSON.parse(policyResult.content[0].text)).toEqual({ employeeId: '123', updated: 1 });
+  });
+
+  it('should accept Bamboo-native status values for status changes', async () => {
+    mockChangeTimeOffRequestStatusData.mockResolvedValue({ status: 'declined' });
+
+    const result = await changeTimeOffRequestStatus({
+      requestId: 'req-2',
+      action: 'declined',
+      confirm: true,
+      payload: { note: 'insufficient balance' },
+    });
+
+    expect(mockChangeTimeOffRequestStatusData).toHaveBeenCalledWith({}, 'req-2', 'declined', {
+      note: 'insufficient balance',
+    });
+    expect(JSON.parse(result.content[0].text)).toEqual({ status: 'declined' });
+  });
+
+  it('should normalize a single-day full request payload before calling BambooHR', async () => {
+    mockCreateTimeOffRequestData.mockResolvedValue({ id: 'req-2' });
+
+    const result = await createTimeOffRequest({
+      employeeId: '123',
+      payload: {
+        start: '2026-04-14',
+        end: '2026-04-14',
+        timeOffTypeId: '96',
+        duration: 'full',
+      },
+      confirm: true,
+    });
+
+    expect(mockCreateTimeOffRequestData).toHaveBeenCalledWith({}, '123', {
+      start: '2026-04-14',
+      end: '2026-04-14',
+      status: 'requested',
+      timeOffTypeId: 96,
+      amount: 1,
+    });
+    expect(JSON.parse(result.content[0].text)).toEqual({ id: 'req-2' });
+  });
+
+  it('should strip duration when Bamboo-compatible fields are already provided', async () => {
+    mockCreateTimeOffRequestData.mockResolvedValue({ id: 'req-3' });
+
+    await createTimeOffRequest({
+      employeeId: '123',
+      payload: {
+        status: 'requested',
+        start: '2026-04-14',
+        end: '2026-04-15',
+        timeOffTypeId: '96',
+        amount: '2',
+        duration: 'full',
+      },
+      confirm: true,
+    });
+
+    expect(mockCreateTimeOffRequestData).toHaveBeenCalledWith({}, '123', {
+      status: 'requested',
+      start: '2026-04-14',
+      end: '2026-04-15',
+      timeOffTypeId: 96,
+      amount: 2,
+    });
+  });
+
+  it('should reject unsupported duration shortcuts that cannot be normalized safely', async () => {
+    const result = await createTimeOffRequest({
+      employeeId: '123',
+      payload: {
+        start: '2026-04-14',
+        end: '2026-04-15',
+        timeOffTypeId: '96',
+        duration: 'full',
+      },
+      confirm: true,
+    });
+
+    expect((result as any).isError).toBe(true);
+    expect(result.content[0].text).toContain('BambooHR time-off requests do not accept a "duration" field');
+    expect(mockCreateTimeOffRequestData).not.toHaveBeenCalled();
   });
 
   it('should surface mutation guard failures as tool errors', async () => {

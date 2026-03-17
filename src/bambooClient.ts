@@ -80,6 +80,27 @@ export class BambooHRClient {
     if (error.response) {
       const status = error.response.status;
       const data = error.response.data as BambooErrorResponse;
+      const headerMessage = error.response.headers?.['x-bamboohr-errormessage']
+        ?? error.response.headers?.['x-bamboohr-message'];
+      const detailedErrors = Array.isArray(data?.errors)
+        ? data.errors
+          .map((entry) => [entry.error, entry.description].filter(Boolean).join(': '))
+          .filter(Boolean)
+          .join('; ')
+        : undefined;
+      const serializedBody = data && typeof data === 'object'
+        ? JSON.stringify(data)
+        : typeof data === 'string'
+          ? data
+          : undefined;
+      const errorMessage = typeof headerMessage === 'string'
+        ? headerMessage
+        : data?.message
+          ?? detailedErrors
+          ?? data?.error
+          ?? data?.description
+          ?? serializedBody
+          ?? error.message;
       
       switch (status) {
         case 401:
@@ -91,7 +112,6 @@ export class BambooHRClient {
         case 429:
           return new Error('Rate limit exceeded. Please try again later.');
         default:
-          const errorMessage = data?.message || data?.errors?.[0]?.error || error.message;
           return new Error(`BambooHR API error (${status}): ${errorMessage}`);
       }
     }

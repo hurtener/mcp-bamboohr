@@ -127,7 +127,30 @@ describe('BambooClient', () => {
       };
       mockAxiosInstance.get.mockRejectedValue(mockError);
 
-      await expect(client.get('/test-endpoint')).rejects.toThrow('BambooHR API error (500): Server error');
+      await expect(client.get('/test-endpoint')).rejects.toThrow('BambooHR API error (500): Some other error format');
+    });
+
+    it('should prefer detailed BambooHR validation payloads and headers', async () => {
+      const mockError = {
+        response: {
+          data: {
+            errors: [{
+              error: 'Validation failed',
+              description: 'amount is required',
+            }],
+          },
+          headers: {
+            'x-bamboohr-errormessage': 'Invalid time off request',
+          },
+          status: 400,
+        },
+        message: 'Request failed with status code 400',
+      };
+      mockAxiosInstance.get.mockRejectedValue(mockError);
+
+      await expect(client.get('/test-endpoint')).rejects.toThrow(
+        'BambooHR API error (400): Invalid time off request',
+      );
     });
 
     it('should handle specific HTTP status codes', async () => {

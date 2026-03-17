@@ -63,7 +63,7 @@ import { registerSurfacePrompts, registerSurfaceResources } from './surface.js';
 export function createBambooMcpServer(): McpServer {
   const server = new McpServer({
     name: 'bamboohr',
-    version: '1.1.0',
+    version: '1.1.1',
   });
 
   server.registerTool('get-employee', {

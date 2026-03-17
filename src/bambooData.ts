@@ -159,12 +159,12 @@ export async function createTimeOffRequestData(
 export async function changeTimeOffRequestStatusData(
   client: BambooHRClient,
   requestId: string,
-  action: 'approve' | 'deny' | 'cancel',
+  status: 'approved' | 'denied' | 'declined' | 'canceled' | 'cancelled',
   payload?: Record<string, unknown>,
 ): Promise<unknown> {
   return client.put(`/time_off/requests/${requestId}/status`, {
     ...(payload ?? {}),
-    status: action,
+    status,
   });
 }
 

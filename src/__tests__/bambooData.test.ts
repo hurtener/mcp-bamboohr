@@ -61,13 +61,13 @@ describe('bambooData', () => {
     client.putDetailed.mockResolvedValue({ data: {}, status: 201, headers: { location: '/employees/123/time_off/history/1' } });
 
     await createTimeOffRequestData(client, '123', { start: '2025-05-01' });
-    await changeTimeOffRequestStatusData(client, '99', 'approve', { note: 'approved', status: 'deny' });
+    await changeTimeOffRequestStatusData(client, '99', 'approved', { note: 'approved', status: 'denied' });
     await addTimeOffHistoryItemData(client, '123', { date: '2025-05-01', amount: '8' });
     await assignEmployeeTimeOffPoliciesData(client, '123', [{ timeOffPolicyId: 5, accrualStartDate: null }]);
 
     expect(client.put).toHaveBeenCalledWith('/employees/123/time_off/request', { start: '2025-05-01' });
     expect(client.put).toHaveBeenCalledWith('/time_off/requests/99/status', {
-      status: 'approve',
+      status: 'approved',
       note: 'approved',
     });
     expect(client.putDetailed).toHaveBeenCalledWith('/employees/123/time_off/history', { date: '2025-05-01', amount: '8' });
