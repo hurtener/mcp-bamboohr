@@ -1,7 +1,10 @@
+const mockClientGet = jest.fn();
 const mockQueryDatasetData = jest.fn();
 const mockGetEmployeeTableData = jest.fn();
 const mockListDatasetsData = jest.fn();
-const mockGetBambooClientForRequest = jest.fn(() => ({}));
+const mockGetBambooClientForRequest = jest.fn(() => ({
+  get: mockClientGet,
+}));
 
 jest.mock('../../requestContext', () => ({
   getBambooClientForRequest: mockGetBambooClientForRequest,
@@ -23,10 +26,9 @@ describe('Workflow Tools', () => {
     jest.clearAllMocks();
   });
 
-  it('should search people and return compact employee cards', async () => {
-    mockListDatasetsData.mockResolvedValue({ datasets: [{ name: 'employee' }] });
-    mockQueryDatasetData.mockResolvedValue({
-      data: [
+  it('should search people via the employee directory first and return compact employee cards', async () => {
+    mockClientGet.mockResolvedValue({
+      employees: [
         {
           id: '1',
           displayName: 'Jane Doe',
@@ -44,7 +46,9 @@ describe('Workflow Tools', () => {
     const result = await searchPeople({ query: 'jane', department: 'engineering', limit: 5 });
     const payload = JSON.parse(result.content[0].text);
 
-    expect(mockQueryDatasetData).toHaveBeenCalledWith({}, 'employee', expect.any(Object));
+    expect(mockClientGet).toHaveBeenCalledWith('/employees/directory');
+    expect(mockListDatasetsData).not.toHaveBeenCalled();
+    expect(payload.source).toBe('directory');
     expect(payload.count).toBe(1);
     expect(payload.employees[0]).toEqual({
       id: '1',
@@ -58,6 +62,36 @@ describe('Workflow Tools', () => {
       manager: 'Alex Manager',
       status: 'Active',
     });
+  });
+
+  it('should fall back to dataset search when directory access is unavailable', async () => {
+    mockClientGet.mockRejectedValue(new Error('Access forbidden. You may not have permission to access this resource.'));
+    mockListDatasetsData.mockResolvedValue({ datasets: [{ name: 'employee' }] });
+    mockQueryDatasetData.mockResolvedValue({
+      data: [
+        {
+          id: '2',
+          displayName: 'Santiago Benvenuto',
+          firstName: 'Santiago',
+          lastName: 'Benvenuto',
+          workEmail: 'santiago@example.com',
+          department: 'AI',
+          location: 'Argentina',
+          supervisor: 'Alex Manager',
+          status: 'Active',
+        },
+      ],
+    });
+
+    const result = await searchPeople({ query: 'santi' });
+    const payload = JSON.parse(result.content[0].text);
+
+    expect(mockClientGet).toHaveBeenCalledWith('/employees/directory');
+    expect(mockListDatasetsData).toHaveBeenCalledWith(expect.objectContaining({ get: mockClientGet }));
+    expect(mockQueryDatasetData).toHaveBeenCalledWith(expect.objectContaining({ get: mockClientGet }), 'employee', expect.any(Object));
+    expect(payload.source).toBe('dataset');
+    expect(payload.dataset).toBe('employee');
+    expect(payload.count).toBe(1);
   });
 
   it('should aggregate employee history tables and preserve per-table errors', async () => {
@@ -76,7 +110,8 @@ describe('Workflow Tools', () => {
     expect(payload.errors.compensation).toBe('Forbidden');
   });
 
-  it('should fail clearly when no employee dataset is discoverable', async () => {
+  it('should fail clearly when directory access is unavailable and no employee dataset is discoverable', async () => {
+    mockClientGet.mockRejectedValue(new Error('Access forbidden. You may not have permission to access this resource.'));
     mockListDatasetsData.mockResolvedValue({ datasets: [{ name: 'timeOff' }] });
 
     const result = await searchPeople({ query: 'jane' });

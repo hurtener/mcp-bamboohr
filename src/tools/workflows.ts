@@ -9,6 +9,7 @@ import {
 } from '../bambooData.js';
 import { getBambooClientForRequest, type BambooRequestContext } from '../requestContext.js';
 import { errorTextResult, jsonTextResult } from '../toolUtils.js';
+import type { Employee, EmployeeDirectory } from '../types.js';
 
 function rowMatchesSearch(row: Record<string, any>, params: z.infer<typeof searchPeopleSchema>): boolean {
   const haystack = [
@@ -54,6 +55,82 @@ function toEmployeeCard(row: Record<string, any>) {
   };
 }
 
+function isDirectoryFallbackCandidate(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : '';
+
+  return message.includes('Access forbidden') || message.includes('Resource not found');
+}
+
+async function searchPeopleViaDirectory(
+  params: z.infer<typeof searchPeopleSchema>,
+  context?: BambooRequestContext,
+) {
+  const client = getBambooClientForRequest(context);
+  const response = await client.get<EmployeeDirectory>('/employees/directory');
+  const rows = (response.employees ?? [])
+    .filter((row: Employee) => rowMatchesSearch(row, params))
+    .slice(0, params.limit ?? 20)
+    .map(toEmployeeCard);
+
+  return {
+    source: 'directory',
+    count: rows.length,
+    filtersApplied: {
+      query: params.query ?? null,
+      employeeId: params.employeeId ?? null,
+      department: params.department ?? null,
+      manager: params.manager ?? null,
+      location: params.location ?? null,
+      status: params.status ?? null,
+    },
+    employees: rows,
+  };
+}
+
+async function searchPeopleViaDataset(
+  params: z.infer<typeof searchPeopleSchema>,
+  context?: BambooRequestContext,
+) {
+  const client = getBambooClientForRequest(context);
+  const datasets = await listDatasetsData(client);
+  const employeeDatasetName = resolveEmployeeDatasetName(datasets);
+  const response = await queryDatasetData(client, employeeDatasetName, {
+    fields: [
+      'id',
+      'displayName',
+      'firstName',
+      'lastName',
+      'workEmail',
+      'jobTitle',
+      'department',
+      'location',
+      'supervisor',
+      'status',
+    ],
+    showHistory: false,
+  });
+
+  const rows = extractDatasetRows(response)
+    .filter((row) => rowMatchesSearch(row, params))
+    .slice(0, params.limit ?? 20)
+    .map(toEmployeeCard);
+
+  return {
+    source: 'dataset',
+    dataset: employeeDatasetName,
+    count: rows.length,
+    filtersApplied: {
+      query: params.query ?? null,
+      employeeId: params.employeeId ?? null,
+      department: params.department ?? null,
+      manager: params.manager ?? null,
+      location: params.location ?? null,
+      status: params.status ?? null,
+    },
+    employees: rows,
+  };
+}
+
 export const searchPeopleSchema = z.object({
   query: z.string().optional().describe('Free-text search across common employee identity fields'),
   employeeId: z.string().optional().describe('Exact employee ID to match'),
@@ -66,43 +143,17 @@ export const searchPeopleSchema = z.object({
 
 export async function searchPeople(params: z.infer<typeof searchPeopleSchema>, extra?: BambooRequestContext) {
   try {
-    const client = getBambooClientForRequest(extra);
-    const datasets = await listDatasetsData(client);
-    const employeeDatasetName = resolveEmployeeDatasetName(datasets);
-    const response = await queryDatasetData(client, employeeDatasetName, {
-      fields: [
-        'id',
-        'displayName',
-        'firstName',
-        'lastName',
-        'workEmail',
-        'jobTitle',
-        'department',
-        'location',
-        'supervisor',
-        'status',
-      ],
-      showHistory: false,
-    });
+    try {
+      const response = await searchPeopleViaDirectory(params, extra);
+      return jsonTextResult(response);
+    } catch (directoryError) {
+      if (!isDirectoryFallbackCandidate(directoryError)) {
+        throw directoryError;
+      }
 
-    const rows = extractDatasetRows(response)
-      .filter((row) => rowMatchesSearch(row, params))
-      .slice(0, params.limit ?? 20)
-      .map(toEmployeeCard);
-
-    return jsonTextResult({
-      dataset: employeeDatasetName,
-      count: rows.length,
-      filtersApplied: {
-        query: params.query ?? null,
-        employeeId: params.employeeId ?? null,
-        department: params.department ?? null,
-        manager: params.manager ?? null,
-        location: params.location ?? null,
-        status: params.status ?? null,
-      },
-      employees: rows,
-    });
+      const response = await searchPeopleViaDataset(params, extra);
+      return jsonTextResult(response);
+    }
   } catch (error) {
     return errorTextResult('Error searching people', error);
   }
