@@ -51,6 +51,8 @@ export const SURFACE_TOOLS: SurfaceToolEntry[] = [
   { name: 'get-changed-table-rows', title: 'Get Changed Table Rows', description: 'List changed table rows since a point in time.', readOnly: true, category: 'History' },
   { name: 'search-people', title: 'Search People', description: 'Curated people search over the BambooHR employee directory, with dataset fallback only when needed.', readOnly: true, category: 'Workflows' },
   { name: 'get-employee-history', title: 'Get Employee History', description: 'Aggregate common employee history tables.', readOnly: true, category: 'Workflows' },
+  { name: 'get-direct-reports', title: 'Get Direct Reports', description: 'List the direct reports of an employee, returning compact employee cards with managerId.', readOnly: true, category: 'Workflows' },
+  { name: 'get-org-subtree', title: 'Get Org Subtree', description: 'Walk the org chart downward from an employee up to maxDepth, returning a nested tree of reports.', readOnly: true, category: 'Workflows' },
 ];
 
 export const SURFACE_PROMPTS: SurfacePromptEntry[] = [
@@ -224,6 +226,7 @@ export function registerSurfacePrompts(server: McpServer): void {
         text: [
           `Answer this BambooHR people question: ${question}.`,
           'Prefer `search-people` for targeted person lookup because it uses the employee directory first, and use `query-dataset` against the account\'s employee dataset for broader analysis.',
+          'Use `get-direct-reports` for one-hop manager-to-reports lookups and `get-org-subtree` to traverse multiple levels of the org chart from a given employee.',
           'Use `get-dataset-fields` first if field availability is unclear, and use `get-employee-history` when the question involves historical changes.',
           'Assume BambooHR credentials are request-scoped in HTTP mode.',
         ].join(' '),

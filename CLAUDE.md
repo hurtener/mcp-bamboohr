@@ -107,7 +107,7 @@ Current mutating tools:
 
 ## Tool Surface
 
-The server exposes 26 tools.
+The server exposes 28 tools.
 
 ### Employee tools
 
@@ -711,6 +711,55 @@ Notes:
 
 Returns:
 - An object with `employeeId`, `tablesRequested`, `history`, and optional `errors`.
+
+#### `get-direct-reports`
+
+Description:
+- Lists direct reports of an employee using the BambooHR employee directory, with dataset fallback.
+
+Input shape:
+
+```json
+{
+  "employeeId": "123",
+  "status": "Active",
+  "limit": 100
+}
+```
+
+Notes:
+
+- `status` and `limit` are optional. `limit` defaults to `100` and is capped at `500`.
+- Returns compact employee cards including a `managerId` field for further org-chart traversal.
+
+Returns:
+- An object with `source`, optional `dataset`, `managerId`, `count`, `totalMatching`, `truncated`, `filtersApplied`, and `directReports`.
+
+#### `get-org-subtree`
+
+Description:
+- Walks the org chart downward from a given employee and returns a nested tree of direct reports.
+
+Input shape:
+
+```json
+{
+  "employeeId": "123",
+  "maxDepth": 3,
+  "status": "Active",
+  "maxNodes": 500
+}
+```
+
+Notes:
+
+- `maxDepth` defaults to `3` and is capped at `10`. `1` returns the root plus its direct reports only.
+- `maxNodes` defaults to `500` and is capped at `5000`. The root node counts toward this limit.
+- The tool fetches the directory once and traverses in memory; nodes beyond `maxDepth` or `maxNodes` are excluded and `truncated` is set to `true`.
+- If the employee is not found, the response includes `found: false` and `tree: null`.
+
+Returns:
+- An object with `source`, optional `dataset`, `rootEmployeeId`, `maxDepth`, `maxNodes`, `totalNodes`, `truncated`, `filtersApplied`, and `tree`.
 
 ## Resources
 

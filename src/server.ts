@@ -57,13 +57,22 @@ import {
   listTimeOffPolicies,
   listTimeOffPoliciesSchema,
 } from './tools/timeOffAdmin.js';
-import { getEmployeeHistory, getEmployeeHistorySchema, searchPeople, searchPeopleSchema } from './tools/workflows.js';
+import {
+  getDirectReports,
+  getDirectReportsSchema,
+  getEmployeeHistory,
+  getEmployeeHistorySchema,
+  getOrgSubtree,
+  getOrgSubtreeSchema,
+  searchPeople,
+  searchPeopleSchema,
+} from './tools/workflows.js';
 import { registerSurfacePrompts, registerSurfaceResources } from './surface.js';
 
 export function createBambooMcpServer(): McpServer {
   const server = new McpServer({
     name: 'bamboohr',
-    version: '1.1.1',
+    version: '1.2.0',
   });
 
   server.registerTool('get-employee', {
@@ -247,6 +256,20 @@ export function createBambooMcpServer(): McpServer {
     inputSchema: getEmployeeHistorySchema.shape,
     annotations: { title: 'Get Employee History', readOnlyHint: true },
   }, getEmployeeHistory);
+
+  server.registerTool('get-direct-reports', {
+    title: 'Get Direct Reports',
+    description: 'List direct reports for an employee. Reads the BambooHR employee directory once (with dataset fallback) and returns compact employee cards including managerId for further org-chart traversal.',
+    inputSchema: getDirectReportsSchema.shape,
+    annotations: { title: 'Get Direct Reports', readOnlyHint: true },
+  }, getDirectReports);
+
+  server.registerTool('get-org-subtree', {
+    title: 'Get Org Subtree',
+    description: 'Walk the org chart downward from an employee, returning a nested tree of direct reports up to maxDepth. Uses one directory fetch (with dataset fallback) and traverses in memory; respects maxNodes to bound output size.',
+    inputSchema: getOrgSubtreeSchema.shape,
+    annotations: { title: 'Get Org Subtree', readOnlyHint: true },
+  }, getOrgSubtree);
 
   registerSurfaceResources(server);
   registerSurfacePrompts(server);

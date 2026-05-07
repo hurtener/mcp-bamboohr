@@ -103,7 +103,7 @@ In streamable HTTP mode, BambooHR credentials are request-scoped. The server res
 
 ## Tool Reference
 
-The server currently exposes 26 tools.
+The server currently exposes 28 tools.
 
 ### Employee tools
 
@@ -500,6 +500,33 @@ Aggregate employee history tables with partial failure handling.
 
 When `tables` is omitted, the default is `jobInfo`, `compensation`, and `employmentStatus`.
 
+#### `get-direct-reports`
+List the direct reports of an employee using the BambooHR employee directory (with dataset fallback).
+
+```json
+{
+  "employeeId": "123",
+  "status": "Active",
+  "limit": 100
+}
+```
+
+Returns compact employee cards including a `managerId` field for further org-chart traversal. `status` and `limit` are optional.
+
+#### `get-org-subtree`
+Walk the org chart downward from an employee and return a nested tree of direct reports.
+
+```json
+{
+  "employeeId": "123",
+  "maxDepth": 3,
+  "status": "Active",
+  "maxNodes": 500
+}
+```
+
+The tool fetches the directory once and traverses in memory. `maxDepth` defaults to `3` (capped at `10`); `maxNodes` defaults to `500` (capped at `5000`) and is the hard limit on returned nodes. The response sets `truncated: true` when results were clipped by either cap.
+
 ## Resources
 
 ### `bamboohr://surface/catalog`
@@ -527,7 +554,7 @@ No arguments. Explains how to choose among datasets, tables, curated tools, and 
 }
 ```
 
-Guides an agent toward `search-people`, `query-dataset`, and `get-employee-history`.
+Guides an agent toward `search-people`, `query-dataset`, `get-employee-history`, `get-direct-reports`, and `get-org-subtree`.
 
 ### `bamboohr-time-off-workflow`
 

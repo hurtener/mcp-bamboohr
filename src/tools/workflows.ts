@@ -55,6 +55,23 @@ function toEmployeeCard(row: Record<string, any>) {
   };
 }
 
+function extractEmployeeId(row: Record<string, any>): string | null {
+  const id = row.id ?? row.employeeId;
+  return id != null ? String(id) : null;
+}
+
+function extractSupervisorId(row: Record<string, any>): string | null {
+  const id = row.supervisorId ?? row.supervisorEId ?? row.managerId;
+  return id != null ? String(id) : null;
+}
+
+function toEmployeeNode(row: Record<string, any>) {
+  return {
+    ...toEmployeeCard(row),
+    managerId: extractSupervisorId(row),
+  };
+}
+
 function isDirectoryFallbackCandidate(error: unknown): boolean {
   const message = error instanceof Error ? error.message : '';
 
@@ -156,6 +173,196 @@ export async function searchPeople(params: z.infer<typeof searchPeopleSchema>, e
     }
   } catch (error) {
     return errorTextResult('Error searching people', error);
+  }
+}
+
+type EmployeeRowsSource = {
+  source: 'directory' | 'dataset';
+  dataset?: string;
+  rows: Array<Record<string, any>>;
+};
+
+async function loadAllEmployeeRows(context?: BambooRequestContext): Promise<EmployeeRowsSource> {
+  const client = getBambooClientForRequest(context);
+
+  try {
+    const response = await client.get<EmployeeDirectory>('/employees/directory');
+    return { source: 'directory', rows: response.employees ?? [] };
+  } catch (directoryError) {
+    if (!isDirectoryFallbackCandidate(directoryError)) {
+      throw directoryError;
+    }
+
+    const datasets = await listDatasetsData(client);
+    const employeeDatasetName = resolveEmployeeDatasetName(datasets);
+    const response = await queryDatasetData(client, employeeDatasetName, {
+      fields: [
+        'id',
+        'displayName',
+        'firstName',
+        'lastName',
+        'workEmail',
+        'jobTitle',
+        'department',
+        'location',
+        'supervisor',
+        'supervisorEId',
+        'status',
+      ],
+      showHistory: false,
+    });
+
+    return {
+      source: 'dataset',
+      dataset: employeeDatasetName,
+      rows: extractDatasetRows(response),
+    };
+  }
+}
+
+export const getDirectReportsSchema = z.object({
+  employeeId: z.string().describe('Employee ID of the manager whose direct reports you want.'),
+  status: z.string().optional().describe('Optional employment status filter (substring match, e.g., "Active").'),
+  limit: z.number().int().positive().max(500).default(100).optional().describe('Maximum number of direct reports to return. Defaults to 100.'),
+});
+
+export async function getDirectReports(params: z.infer<typeof getDirectReportsSchema>, extra?: BambooRequestContext) {
+  try {
+    const { source, dataset, rows } = await loadAllEmployeeRows(extra);
+    const targetId = String(params.employeeId);
+    const limit = params.limit ?? 100;
+    const statusFilter = params.status?.toLowerCase();
+
+    const matches = rows.filter((row) => extractSupervisorId(row) === targetId);
+    const filtered = statusFilter
+      ? matches.filter((row) => `${row.status ?? ''}`.toLowerCase().includes(statusFilter))
+      : matches;
+
+    const directReports = filtered.slice(0, limit).map(toEmployeeNode);
+
+    return jsonTextResult({
+      source,
+      ...(dataset ? { dataset } : {}),
+      managerId: targetId,
+      count: directReports.length,
+      totalMatching: filtered.length,
+      truncated: filtered.length > directReports.length,
+      filtersApplied: { status: params.status ?? null },
+      directReports,
+    });
+  } catch (error) {
+    return errorTextResult('Error getting direct reports', error);
+  }
+}
+
+export const getOrgSubtreeSchema = z.object({
+  employeeId: z.string().describe('Root employee ID; the subtree returned is rooted here.'),
+  maxDepth: z.number().int().min(1).max(10).default(3).optional().describe('Maximum recursion depth. 1 returns the root plus direct reports only. Defaults to 3.'),
+  status: z.string().optional().describe('Optional employment status filter (substring match) applied to descendants.'),
+  maxNodes: z.number().int().positive().max(5000).default(500).optional().describe('Hard cap on the total number of nodes returned including the root. Defaults to 500.'),
+});
+
+export async function getOrgSubtree(params: z.infer<typeof getOrgSubtreeSchema>, extra?: BambooRequestContext) {
+  try {
+    const { source, dataset, rows } = await loadAllEmployeeRows(extra);
+    const targetId = String(params.employeeId);
+    const maxDepth = params.maxDepth ?? 3;
+    const maxNodes = params.maxNodes ?? 500;
+    const statusFilter = params.status?.toLowerCase();
+
+    const byId = new Map<string, Record<string, any>>();
+    const childrenByManager = new Map<string, Array<Record<string, any>>>();
+
+    for (const row of rows) {
+      const id = extractEmployeeId(row);
+      if (id) {
+        byId.set(id, row);
+      }
+      const managerId = extractSupervisorId(row);
+      if (managerId) {
+        const list = childrenByManager.get(managerId) ?? [];
+        list.push(row);
+        childrenByManager.set(managerId, list);
+      }
+    }
+
+    const root = byId.get(targetId);
+    if (!root) {
+      return jsonTextResult({
+        source,
+        ...(dataset ? { dataset } : {}),
+        rootEmployeeId: targetId,
+        found: false,
+        message: 'Employee not found in the directory or employee dataset.',
+        tree: null,
+      });
+    }
+
+    const visited = new Set<string>();
+    let truncated = false;
+    let nodeCount = 0;
+
+    function build(row: Record<string, any>, depth: number): Record<string, any> | null {
+      if (nodeCount >= maxNodes) {
+        truncated = true;
+        return null;
+      }
+
+      const id = extractEmployeeId(row) ?? '';
+      if (id && visited.has(id)) {
+        truncated = true;
+        return null;
+      }
+      if (id) {
+        visited.add(id);
+      }
+      nodeCount += 1;
+
+      const node: Record<string, any> = toEmployeeNode(row);
+      const allChildren = id ? (childrenByManager.get(id) ?? []) : [];
+      const matchedChildren = statusFilter
+        ? allChildren.filter((child) => `${child.status ?? ''}`.toLowerCase().includes(statusFilter))
+        : allChildren;
+
+      if (depth < maxDepth) {
+        const builtChildren: Array<Record<string, any>> = [];
+        for (const child of matchedChildren) {
+          const built = build(child, depth + 1);
+          if (built) {
+            builtChildren.push(built);
+          }
+        }
+        node.directReports = builtChildren;
+        node.directReportCount = builtChildren.length;
+        if (builtChildren.length < matchedChildren.length) {
+          truncated = true;
+        }
+      } else {
+        node.directReports = [];
+        node.directReportCount = matchedChildren.length;
+        if (matchedChildren.length > 0) {
+          truncated = true;
+        }
+      }
+
+      return node;
+    }
+
+    const tree = build(root, 0);
+
+    return jsonTextResult({
+      source,
+      ...(dataset ? { dataset } : {}),
+      rootEmployeeId: targetId,
+      maxDepth,
+      maxNodes,
+      totalNodes: nodeCount,
+      truncated,
+      filtersApplied: { status: params.status ?? null },
+      tree,
+    });
+  } catch (error) {
+    return errorTextResult('Error building org subtree', error);
   }
 }
 
